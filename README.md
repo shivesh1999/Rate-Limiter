@@ -92,57 +92,6 @@ The rate limiter runs as a standalone service that can protect any backend API o
 1. If the request is allowed (within rate limits), it redirects to the `SUCCESS_URL`
 2. If the request exceeds the rate limit, it returns a 429 (Too Many Requests) status with an error message
 
-### As a Middleware in Your Go Application
-
-You can integrate the rate limiter into your own Go application:
-
-```go
-package main
-
-import (
-	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v8"
-	"yourusername/token-bucket-rate-limiter/limiter"
-)
-
-func main() {
-	// Initialize Redis client
-	client := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-		DB:   0,
-	})
-
-	// Initialize rate limiter
-	rateLimiter := limiter.NewRedisTokenBucket(
-		client,
-		10,    // capacity
-		1,     // refill rate
-		3600,  // TTL in seconds
-	)
-
-	// Create Gin router
-	r := gin.Default()
-
-	// Apply rate limiting middleware
-	r.Use(func(c *gin.Context) {
-		ip := c.ClientIP()
-		if !rateLimiter.AllowRequest(c.Request.Context(), ip) {
-			c.JSON(429, gin.H{"error": "Rate limit exceeded"})
-			c.Abort()
-			return
-		}
-		c.Next()
-	})
-
-	// Define your routes
-	r.GET("/api", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "Success"})
-	})
-
-	r.Run(":8080")
-}
-```
-
 ## API Endpoints
 
 The service exposes the following endpoint:
@@ -163,10 +112,6 @@ The tests verify:
 - Basic rate limiting functionality
 - Token refill behavior
 - TTL expiration
-
-## License
-
-[MIT License](LICENSE)
 
 ## Contributing
 
