@@ -1,5 +1,6 @@
-# Use the official Golang image as the base image
-FROM golang:1.24 AS builder
+# Use distroless as minimal base image to package the application
+# Distroless images contain only your application and its runtime dependencies
+FROM golang:1.24.6-bullseye AS builder
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -12,16 +13,22 @@ RUN go mod tidy
 COPY . .
 
 # Build the Go application
-RUN go build -o rate-limiter .
+# Adding security flags
+RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o rate-limiter .
 
-# Use a smaller base image for running the application
-FROM alpine:latest
+# Use Google's distroless base image to reduce attack surface
+# https://github.com/GoogleContainerTools/distroless
+FROM gcr.io/distroless/base:nonroot
 
-# Set working directory
+# Create directory for the app
 WORKDIR /app
 
-# Copy the compiled binary from the builder stage
+# Copy the compiled binary and .env file from the builder stage
 COPY --from=builder /app/rate-limiter .
+COPY --from=builder /app/.env .
+
+# Run as non-root user
+USER nonroot:nonroot
 
 # Expose port 8080
 EXPOSE 8080
