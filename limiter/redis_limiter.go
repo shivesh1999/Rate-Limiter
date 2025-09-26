@@ -18,7 +18,6 @@ type RedisTokenBucket struct {
 	ttl        time.Duration // Expiration time for IP entries
 }
 
-// NewRedisTokenBucket initializes a Redis-backed token bucket with TTL support
 func NewRedisTokenBucket(client *redis.Client, capacity, refillRate float64, ttl time.Duration) *RedisTokenBucket {
 	return &RedisTokenBucket{
 		client:     client,
@@ -53,7 +52,6 @@ func (rtb *RedisTokenBucket) AllowRequest(ctx context.Context, ip string) bool {
 	elapsed := float64(now - lastUpdated)
 	newTokens := math.Min(rtb.capacity, tokens+(elapsed*rtb.refillRate))
 
-	// Allow request only if at least 1 token is available
 	if newTokens >= 1 {
 		pipe := rtb.client.TxPipeline()
 		pipe.Set(ctx, redisKey+":tokens", newTokens-1, rtb.ttl) // Set TTL for cleanup
@@ -66,7 +64,6 @@ func (rtb *RedisTokenBucket) AllowRequest(ctx context.Context, ip string) bool {
 		return true
 	}
 
-	// Log rejections
 	log.Printf("[RedisLimiter] Request rejected for IP %s. Tokens left: %.2f", ip, newTokens)
 	return false
 }
